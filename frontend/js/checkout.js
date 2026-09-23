@@ -236,6 +236,7 @@ placeBtn.addEventListener('click', async () => {
     rememberToken(order.token);
     clearCart();
     api.clearCache();
+    api.clearCache('/coupons');
 
     pendingKey = null;
     couponInput.value = '';

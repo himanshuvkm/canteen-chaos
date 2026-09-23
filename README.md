@@ -175,6 +175,62 @@ Prices always come from `menu.json`. A `price` in the request body is ignored.
 - **The kitchen advances orders on a timer**, so the tracking screen has
   something to show without anyone clicking. `AUTO_COOK=false` stops it.
 
+## Debugging hints for selected planted backend bugs
+
+These hints are written for students who may not know the backend words yet.
+
+### Bug 1 — Stock quantity not checked
+
+- **Meaning of words:**
+  - **Stock** = how many plates/items are available.
+  - **Quantity / qty** = how many the user is trying to buy.
+  - **Validation** = checks that reject bad input before an order is created.
+- **Hint:** if a dish says `In stock: 2`, try putting `3` or more in the cart.
+- **Where to look:** order validation and stock reservation logic.
+- **Question to ask:** does the backend check stock both before pricing and immediately before subtracting stock?
+
+### Bug 2 — Cancelled order stock restored incorrectly
+
+- **Meaning of words:**
+  - **Reserve stock** = subtract stock when an order is placed.
+  - **Release stock** = add stock back when an order is cancelled.
+  - **Inventory drift** = stock slowly becomes wrong after actions.
+- **Hint:** write down stock, place an order, cancel it, then check stock again.
+- **Where to look:** the function that runs when an order is cancelled.
+- **Question to ask:** is cancellation adding the quantity back, or subtracting it again?
+
+### Bug 3 — Expired coupon still applies
+
+- **Meaning of words:**
+  - **Expired** = past the coupon's `expiresAt` date.
+  - **Manual submission** = typing/sending a coupon code even if it is not shown as a suggestion.
+  - **Server-side validation** = backend must reject invalid coupons even if frontend allows typing them.
+- **Hint:** type `FRESHERS24` manually in the coupon box.
+- **Where to look:** coupon validation in billing/pricing logic.
+- **Question to ask:** does the backend check the coupon expiry at the point where the discount is calculated?
+
+### Bug 4 — Menu limit parameter ignored
+
+- **Meaning of words:**
+  - **Limit** = requested page size, e.g. `limit=5` means return 5 items.
+  - **Pagination** = splitting a long list into pages.
+  - **Slice** = the selected part of the list for one page.
+- **Hint:** the menu says requested page size is `5`; count how many dish cards are actually shown.
+- **Where to look:** menu search/pagination logic, not the card rendering.
+- **Question to ask:** does the backend calculate a sliced page but accidentally return the full list?
+
+### Bug 5 — Member order filter broken
+
+- **Meaning of words:**
+  - **Member ID** = this browser/device's user identity, sent as `memberId`.
+  - **Order token** = public order code like `CC-1234` saved in browser localStorage.
+  - **Filter** = returning only rows that match a condition.
+  - **localStorage** = browser storage that can keep old order tokens from earlier tests.
+- **Hint:** use a private window or clear localStorage, place one order, then open My Orders.
+- **What to compare:** My Orders shows requested member, server returned count, and saved token count.
+- **Where to look:** `GET /api/orders` query filtering.
+- **Question to ask:** frontend sends `memberId`; is backend reading `memberId` or a different query name?
+
 ## Before you plant bugs
 
 ```bash
