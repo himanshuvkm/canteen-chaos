@@ -56,10 +56,10 @@ Reported by: a student, on a tablet.
 
 ---
 
-### CC-05 — "The menu button opens nothing"
+### CC-05 — "The category bar scrolls away on my phone"
 
-> "On my phone there's the three-lines button in the corner. I tap it and
-> nothing happens. No menu, no links, nothing."
+> "On smaller screens, the category and filter bar scrolls away instead of
+> staying visible at the top while I scroll down through the menu dishes."
 
 Reported by: a student, on a phone.
 

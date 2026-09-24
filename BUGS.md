@@ -22,7 +22,7 @@ show it, the browser cached the clean CSS; hard-reload.
 | 2 | Hard-coded colour ignores the theme | `.dish-body` | Dish names and prices unreadable in dark mode | any width, click **Dark** |
 | 3 | Grid tracks cannot shrink below card content | `.name-btn`, `.dish-card`, `.dish-card img` | Menu wider than the screen, right column cut off | 500×900 |
 | 4 | Invisible layer over card controls | `.dish-card::after`, `.img-wrap::after` | Add to Cart and ★ do nothing | 761–900px wide |
-| 5 | Descendant selector instead of compound | `.site-nav .open` | The ☰ button opens nothing | 375×800, tap ☰ |
+| 5 | Ancestor overflow breaks sticky positioning | `.view` | Category/filter tabs scroll away instead of staying visible | 375×800, scroll menu |
 
 ### 1 — Stacking context
 
@@ -72,14 +72,35 @@ pseudo-elements cover the controls: `.dish-card::after` over Add to Cart,
 - **Fix:** `pointer-events: none`, or scope both to `.dish-card.blocked`.
 - Raising the buttons' z-index treats the symptom.
 
-### 5 — Selector
+### 5 — Sticky positioning & ancestor overflow
 
-`.site-nav .open` means "an `.open` element inside `.site-nav`", which does
-not exist. It should be `.site-nav.open`. The JS works — the class and
-`aria-expanded` are both set — but the CSS never matches. That split is
-the clue.
+Inside `@media (max-width: 480px)`, `.view { overflow-x: hidden }` was added as a responsive layout rule. In CSS, setting `overflow` to any value other than `visible` on an ancestor creates a scroll/clipping container. Because the ancestor `.view` does not scroll internally (the page viewport scrolls), `.filters` (which has `position: sticky; top: 0; z-index: 40;`) is trapped inside `.view`'s static context and scrolls off-screen instead of sticking to the viewport.
 
-- **Fix:** remove the space. Forcing it with `!important` or JS is not a fix.
+- **Candidate symptom:** "On smaller screens, the category/filter bar scrolls away instead of staying visible while I scroll through the menu."
+- **Reproduce:**
+  - Viewport: <= 480px wide (e.g. 375×800)
+  - Action: Scroll down through the menu dishes
+  - Broken behavior: The category/filter bar (`.filters`) scrolls out of view rather than remaining sticky at the top.
+- **Root cause:**
+  - Ancestor `.view` has `overflow-x: hidden` in `@media (max-width: 480px)`.
+  - An ancestor with non-visible overflow acts as the containing scroll context for sticky descendants. Since `.view` itself is not the scrolling element, `.filters` cannot stick relative to window scroll.
+- **Selectors affected:**
+  - Ancestor: `.view` under `@media (max-width: 480px)`
+  - Sticky element: `.filters` (`position: sticky; top: 0; z-index: 40;`)
+- **Concept:**
+  - `position: sticky`
+  - Scrolling containers & containing context
+  - Ancestor overflow clipping
+- **Correct fix:**
+  - Remove `overflow-x: hidden` from `.view` in `@media (max-width: 480px)` (or set `overflow-x: visible`).
+- **Incorrect fixes:**
+  - Changing `.filters` to `position: fixed` (breaks document flow and overlaps subsequent content without manual margin compensation).
+  - Removing `position: sticky` from `.filters` (removes the feature instead of fixing it).
+  - Adding `!important` to `position: sticky` on `.filters` (does not bypass ancestor overflow context).
+- **Hidden test:**
+  - Set viewport to 375×800.
+  - Scroll window down: `window.scrollTo(0, 400)`.
+  - Check `document.querySelector('.filters').getBoundingClientRect().top`. On clean/fixed build it is pinned at `0` (or top offset). On broken build it is negative (scrolled away with the page).
 
 ### Notes
 
@@ -87,6 +108,8 @@ the clue.
   live in localStorage; clear it or use a private window.
 - Outside 7 AM–10 PM the JS disables Add to Cart, so test bug 4 with ★,
   which is never disabled, or run `TZ=Pacific/Auckland npm start`.
+- Bug 5 is independent of Bugs 1–4; desktop sticky behavior functions normally while breaking only at responsive mobile viewports (<= 480px).
+- Mobile navigation `.site-nav.open` was corrected and functions normally (it is not a planted bug).
 - Search and category filters sometimes render the whole menu plus the
   matches. That is in the clean build too — not one of the five. A solid
   write-up earns a brownie point.
