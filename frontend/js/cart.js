@@ -30,10 +30,14 @@ function renderCartLines() {
         const dish = state.dishes.find((d) => d.id === dishId);
         const name = dish ? dish.name : `Dish #${dishId}`;
         const price = dish ? rupees(dish.price * qty) : '...';
+        const stockNote = dish
+          ? html`<small class="muted">In stock: ${dish.stock}${qty > dish.stock ? ' · cart quantity exceeds stock' : ''}</small>`
+          : '';
 
         return html`<div class="cart-line" data-id="${dishId}">
           <div class="cart-line-main">
             <span class="cart-line-name">${name}</span>
+            ${raw(stockNote)}
             <span class="cart-line-price">${price}</span>
           </div>
           <div class="cart-line-actions">
@@ -137,7 +141,7 @@ async function loadCouponHints() {
     render(
       couponHints,
       coupons
-        .map((c) => html`<button class="coupon-chip" data-code="${c.code}" title="${c.description}">${c.code}</button>`)
+        .map((c) => html`<button class="coupon-chip" data-code="${c.code}" title="${c.description}">${c.code} · ${c.usesLeft} left</button>`)
         .join('')
     );
   } catch (e) {

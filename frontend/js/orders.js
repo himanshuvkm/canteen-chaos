@@ -124,37 +124,39 @@ $('#rateOrderBtn').addEventListener('click', (e) => openRating(e.currentTarget.d
 /* ---------------------------------------------------- My Orders */
 
 async function loadMyOrders() {
-  if (state.tokens.length === 0) {
-    ordersList.innerHTML = '';
-    return showStatus(ordersStatus, emptyBlock('No orders yet', 'Orders you place on this device show up here.'));
-  }
-
   hideStatus(ordersStatus);
   render(ordersList, skeletonRows(3));
 
-  const results = await Promise.allSettled(state.tokens.map((t) => api.getOrder(t)));
-
-  // a token whose order the server no longer knows about is dropped
-  results.forEach((result, i) => {
-    if (result.status === 'rejected' && result.reason.status === 404) forgetToken(state.tokens[i]);
-  });
-
-  const orders = results
-    .filter((r) => r.status === 'fulfilled')
-    .map((r) => r.value)
-    .sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt));
-
-  if (orders.length === 0) {
+  let orders = [];
+  try {
+    const data = await api.listOrders({ memberId: deviceId(), limit: 25 });
+    orders = data.orders;
+  } catch (err) {
     ordersList.innerHTML = '';
-    const failure = results.find((r) => r.status === 'rejected');
-    showStatus(ordersStatus, errorBlock(failure ? failure.reason : new Error('Nothing to show'), 'ordersRetry'));
+    showStatus(ordersStatus, errorBlock(err, 'ordersRetry'));
     const retry = $('#ordersRetry');
     if (retry) retry.addEventListener('click', loadMyOrders);
     return;
   }
 
-  const active = orders.filter((o) => !['picked', 'cancelled', 'refunded'].includes(o.status));
-  const past = orders.filter((o) => ['picked', 'cancelled', 'refunded'].includes(o.status));
+  if (orders.length === 0) {
+    ordersList.innerHTML = '';
+    return showStatus(
+      ordersStatus,
+      emptyBlock(
+        'No orders found',
+        `Requested member ${deviceId()}. This browser has ${state.tokens.length} saved order token(s).`
+      )
+    );
+  }
+
+  showStatus(
+    ordersStatus,
+    html`<p class="status-sub">Requested member ${deviceId()} · server returned ${orders.length} order(s) · this browser has ${state.tokens.length} saved token(s)</p>`
+  );
+
+  const active = orders.filter((o) => Array.isArray(o.allowedNext) && o.allowedNext.length > 0);
+  const past = orders.filter((o) => !Array.isArray(o.allowedNext) || o.allowedNext.length === 0);
 
   render(
     ordersList,

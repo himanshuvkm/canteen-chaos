@@ -38,7 +38,7 @@ async function loadMenu({ append = false } = {}) {
       servedOnly: state.filters.servedOnly ? 'true' : '',
       maxPrice: state.filters.maxPrice,
       page: state.page,
-      limit: 12,
+      limit: 5,
     });
 
     if (myRequest !== menuRequestId) return; // a newer search already won
@@ -126,7 +126,11 @@ function renderMenu() {
 
   hideStatus(menuStatus);
   menuGrid.innerHTML = state.dishes.map(dishCard).join('');
-  resultCount.textContent = `${state.dishes.length} of ${state.total} dishes`;
+  const prices = state.dishes.map((d) => Number(d.price)).filter((p) => !Number.isNaN(p));
+  const priceNote = prices.length
+    ? ` · first ${rupees(prices[0])} · last ${rupees(prices[prices.length - 1])}`
+    : '';
+  resultCount.textContent = `Showing ${state.dishes.length} dishes · requested page size 5 · total ${state.total}${priceNote}`;
   show(loadMoreBtn, state.hasMore);
 }
 
