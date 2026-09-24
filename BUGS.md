@@ -23,39 +23,48 @@ search result overwriting a newer one.
 
 ## Backend
 
-Planted in PR #1, plus one data fix afterwards.
+Planted in PR #1, plus frontend/data visibility changes afterwards.
 
 ### Listed to candidates (5)
 
 | # | Bug | File | What the candidate sees |
 |---|---|---|---|
-| 1 | Stock never checked | `logic/validation.js` | Ordering 5 of a dish with stock 3 succeeds; stock goes negative |
-| 2 | Cancel subtracts stock instead of restoring | `logic/validation.js` | Cancelling an order makes stock fall further |
+| 1 | Stock quantity not checked | `logic/validation.js` | Cart can exceed available stock and the backend still accepts the order |
+| 2 | Cancelled order stock restored incorrectly | `logic/validation.js` | Cancelling an order makes stock drop again instead of returning |
 | 3 | Expired coupon still applies | `logic/pricing.js` | `FRESHERS24` works despite being expired |
-| 4 | `limit` ignored | `logic/search.js` | Menu asks for 5 dishes, gets all 37 |
-| 5 | Member filter reads the wrong query name | `routes/orders.routes.js` | My Orders is always empty |
+| 4 | `limit` ignored | `logic/search.js` | Menu asks for 5 dishes, but more than 5 cards render |
+| 5 | `price-asc` and `price-desc` swapped | `logic/search.js` | Both sort options do the opposite of their label |
 
 **Bug 1 has two halves.** The check is missing in `validateLine` *and* in
 `reserveStock`. Fixing only the first still oversells when two orders
 arrive together. Decide whether that is full marks or partial.
 
+
 ### Not listed — bonus (3)
 
 | # | Bug | File | What the candidate sees |
 |---|---|---|---|
-| A | `price-asc` and `price-desc` swapped | `logic/search.js` | Both sort options do the opposite of their label |
-| B | Coupon `usesLeft` never decrements | `routes/orders.routes.js` | A coupon can be used forever; cancelling even *adds* uses |
-| C | `ready` listed as terminal | `logic/status.js` | An order can never reach `picked`; rating is unreachable |
+| A | Coupon `usesLeft` never decrements | `routes/orders.routes.js` | Coupon count stays the same after successful use, so a coupon can be used forever |
+| B | Member filter reads the wrong query name | `routes/orders.routes.js` | My Orders shows saved token(s), but the server returns 0 or unrelated orders |
+| C | `ready` listed as terminal | `logic/status.js` | A ready order is treated as past/done before pickup |
 
-Bug C also hides the rating feature, so do not set any task that
-depends on rating an order.
 
 ### Supporting changes (not bugs)
 
 - `FRESHERS24` uses set to 10, so bug 3 is reachable at all
 - Client-side stock guard removed in `frontend/js/state.js`, so the
   request actually reaches the server
+- Cart now shows stock warnings in `frontend/js/cart.js`, so bug 1 is
+  visible before checkout
+- Coupon chips show remaining uses in `frontend/js/cart.js`, and
+  `frontend/js/checkout.js` clears the coupon cache after placing an order
 - Menu page size set to 5 in `frontend/js/menu.js`, so bug 4 is visible
+- Menu result text shows first/last visible prices in `frontend/js/menu.js`,
+  so bug 5 is easier to see
+- My Orders calls the backend with `memberId` and shows requested member,
+  server count and saved token count in `frontend/js/orders.js`, so bonus bug B is easier to see
+- My Orders active/past grouping trusts backend `allowedNext`, so bonus
+  bug C is visible earlier
 
 ### Checking they are all still live
 
@@ -63,9 +72,9 @@ depends on rating an order.
 cd backend && node smoke.js
 ```
 
-On the current build: **86 passed, 4 failed**. The four failures are
-bugs 2, 3, 4 and A. Bugs 1, 5, B and C are not covered by smoke and have
-to be checked by hand — see the notes above for how each one shows up.
+Smoke coverage is not complete. Stock oversell, member-order filtering,
+coupon-use counts and terminal-status behavior may need to be checked by
+hand using the notes above.
 
 ### Resetting between test runs
 
